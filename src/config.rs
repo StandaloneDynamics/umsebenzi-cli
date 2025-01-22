@@ -35,9 +35,9 @@ pub fn run(args: ConfigArgs) {
 }
 
 fn add() {
-    let mut host = "http://localhost:8000/api/v1/";
+    let mut host = "http://localhost:8000/api/v1";
 
-    print!("Host [http://localhost:8000/api/v1/]: ");
+    print!("Host [http://localhost:8000/api/v1]: ");
     let _ = io::stdout().flush();
     let mut host_buf = String::new();
     io::stdin()
