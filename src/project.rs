@@ -1,11 +1,8 @@
-use crate::config::read_toml_file;
-use crate::service::{build_url, get_client};
+use crate::service::{get_request, CLIENT_ERROR, CLIENT_RESPONSE_ERROR};
 use crate::description::text_editor;
 
-use anyhow::Result;
 use clap::{Parser, Subcommand};
 use cli_table::{print_stdout, Table, WithTitle};
-use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::{
@@ -14,11 +11,10 @@ use std::{
 };
 use colored::Colorize;
 
+const PROJECT_ENDPOINT: &str = "/projects/";
 const PROJECT_TITLE_ERROR: &str = "Project title expected";
 const PROJECT_CODE_ERROR: &str = "Project code expected";
 const PROJECT_DESCRIPTION_ERROR: &str = "Project description expected";
-const CLIENT_ERROR: &str = "Unable to create request client";
-const CLIENT_RESPONSE_ERROR: &str = "Response Error";
 
 
 
@@ -80,49 +76,17 @@ pub fn run(args: ProjectArgs) {
     }
 }
 
-struct PrepClient {
-    client: Client,
-    url: String,
-}
-
-fn prepare_client(instance: Option<&String>) -> Result<PrepClient> {
-    let config = match read_toml_file() {
-        Ok(v) => v,
-        Err(err) => {
-            eprintln!("{}: {err}", "Unable to read toml file".red());
-            std::process::exit(1);
-        }
-    };
-    let url = match build_url(&config, "/api/v1/projects/", instance) {
-        Ok(u) => u,
-        Err(err) => {
-            eprintln!("{}: {err}", "Unable to build url".red());
-            std::process::exit(1);
-        }
-    };
-    let client = match get_client(&config) {
-        Ok(c) => c,
-        Err(err) => {
-            eprint!("{}: {err}", CLIENT_ERROR.red());
-            std::process::exit(1);
-        }
-    };
-    Ok(PrepClient {
-        client: client,
-        url: url,
-    })
-}
 
 fn list() {
-    let prep = match prepare_client(None) {
-        Ok(c) => c,
+    let request = match get_request(PROJECT_ENDPOINT, None){
+        Ok(r) => r,
         Err(err) => {
-            eprint!("{}: {err}", CLIENT_ERROR.red());
+            eprintln!("{}: {err}", CLIENT_ERROR.red().bold());
             std::process::exit(1);
         }
     };
 
-    let resp = match prep.client.get(prep.url).send() {
+    let resp = match request.client.get(request.url).send() {
         Ok(r) => r,
         Err(err) => {
             eprintln!("{}: {err}", CLIENT_RESPONSE_ERROR.red());
@@ -137,11 +101,9 @@ fn list() {
                 std::process::exit(1);
             }
         };
-        //println!("{:?}", proj);
         let _ = print_stdout(proj.with_title()).is_ok();
     } else {
-        println!("{}", resp.status());
-        println!("{}", resp.url());
+        println!("{} {}", "Error".red().bold(), resp.status());
     }
     //
 }
@@ -169,22 +131,33 @@ fn add() {
         eprintln!("{}", PROJECT_CODE_ERROR.red().bold());
         std::process::exit(1);
     }
-    println!("{}: ","Description [type 'END' on a new line to finish]".green().bold());
-    let description = text_editor(None).expect(&PROJECT_DESCRIPTION_ERROR.red().bold());
-   
+    print!("{}: ","Description [type 'Y' to open editor]".green().bold());
+    let _ = io::stdout().flush();
+    let mut answer_buf = String::new();
+    io::stdin()
+        .read_line(&mut answer_buf)
+        .expect(&PROJECT_CODE_ERROR.red());
+    let mut description = String::new();
+    if answer_buf.trim() == "Y"{
+        description = text_editor(None).expect(&PROJECT_DESCRIPTION_ERROR.red().bold());
+    }else{
+        eprintln!("{}", "Invalid Command expected Y".red().bold());
+        std::process::exit(1);
+    }
+
     let mut project_body = HashMap::new();
     project_body.insert("title", title_buf);
     project_body.insert("description", description);
     project_body.insert("code", code_buf);
 
-    let prep = match prepare_client(None) {
+    let request = match get_request(PROJECT_ENDPOINT, None) {
         Ok(c) => c,
         Err(err) => {
             eprint!("{}: {err}", CLIENT_ERROR.red());
             std::process::exit(1);
         }
     };
-    let resp = match prep.client.post(prep.url).json(&project_body).send() {
+    let resp = match request.client.post(request.url).json(&project_body).send() {
         Ok(r) => r,
         Err(err) => {
             eprint!("{}: {err}", CLIENT_RESPONSE_ERROR.red());
@@ -205,14 +178,14 @@ fn add() {
 fn edit(project_id: String) {
     // First get the exising project
     let proj: ProjectResponse;
-    let prep = match prepare_client(Some(&project_id)) {
+    let request = match get_request(PROJECT_ENDPOINT, Some(&project_id)) {
         Ok(c) => c,
         Err(err) => {
             eprint!("{}: {err}", CLIENT_ERROR.red());
             std::process::exit(1);
         }
     };
-    let resp = match prep.client.get(prep.url).send() {
+    let resp = match request.client.get(request.url).send() {
         Ok(r) => r,
         Err(err) => {
             eprint!("{}: {err}", CLIENT_RESPONSE_ERROR.red());
@@ -224,7 +197,7 @@ fn edit(project_id: String) {
         proj = match resp.json() {
             Ok(r) => r,
             Err(err) => {
-                eprint!("Unable to parse response json: {err}");
+                eprint!("{} {err}", "Unable to parse response json".red());
                 std::process::exit(1);
             }
         };
@@ -239,7 +212,7 @@ fn edit(project_id: String) {
             title_buf = proj.title
         }
 
-        print!("{}", "Code: [leave blank to use existing]".green().bold());
+        print!("{}: ", "Code: [leave blank to use existing]".green().bold());
         let _ = io::stdout().flush();
         let mut code_buf = String::new();
         io::stdin()
@@ -249,16 +222,16 @@ fn edit(project_id: String) {
             code_buf = proj.code
         }
 
-        print!("Description: [Type E to edit. leave blank to use existing]: ");
+        print!("{}: ", "Description: [Type E to edit. leave blank to use existing]".green().bold());
         let _ = io::stdout().flush();
         let mut description_buf = String::new();
         io::stdin()
             .read_line(&mut description_buf)
-            .expect("Project description expected");
+            .expect(&PROJECT_DESCRIPTION_ERROR.red());
         if description_buf.trim().is_empty() {
             description_buf = proj.description
         }else if description_buf.trim() == "E" {
-            description_buf =  text_editor(Some(proj.description)).expect("Project description expected");
+            description_buf =  text_editor(Some(proj.description)).expect(&PROJECT_DESCRIPTION_ERROR.red());
         }
 
         let mut project_body = HashMap::new();
@@ -266,42 +239,42 @@ fn edit(project_id: String) {
         project_body.insert("description", description_buf);
         project_body.insert("code", code_buf);
 
-        let prep = match prepare_client(Some(&project_id)) {
+        let request = match get_request(PROJECT_ENDPOINT,Some(&project_id)) {
             Ok(c) => c,
             Err(err) => {
-                eprint!("unable to create client {:?}", err);
+                eprint!("{}: {err}", CLIENT_ERROR.red());
                 std::process::exit(1);
             }
         };
-        let resp = match prep.client.put(prep.url).json(&project_body).send() {
+        let resp = match request.client.put(request.url).json(&project_body).send() {
             Ok(r) => r,
             Err(err) => {
-                eprintln!("Unable to send request {err}");
+                eprint!("{}: {err}", CLIENT_RESPONSE_ERROR.red());
                 std::process::exit(1);
             }
         };
         if resp.status().is_success() {
-            println!("Project Updated")
+            println!("{}", "Project Updated".green().bold())
         } else if resp.status().is_client_error() {
             let response: ClientErrorResponse = resp.json().unwrap();
-            println!("{:?}", response);
+            println!("{}: {:?}", "error".red(), response);
         } else {
-            println!("{}", resp.status());
-            println!("{}", resp.text().unwrap());
+            println!("{}: {}", "Error".red().bold(),resp.status());
+            println!("{}: {}", "Error".red().bold(), resp.text().unwrap());
         };
 
     } else if resp.status().is_client_error(){
-        eprintln!("Unable to find project code");
+        eprintln!("{}: Unable to find project code", "Error".red());
     } else{
-        eprintln!("Unable to fetch project details:  {:?}", resp.status());
-        eprintln!("{:?}", resp.text().ok());
+        eprintln!("{}: Unable to fetch project details:  {:?}", "Error".red().bold(), resp.status());
+        eprintln!("{}: {:?}", "Error".red().bold(),resp.text().ok());
     }
 }
 
 fn delete(project_id: String) {
     let yes = "Y";
     let no = "N";
-    print!("Are you sure you want to delete project with ID={project_id}: [Y/N] ");
+    print!("{} {} [Y/N]: ", "Are you sure you want to delete project with ID=".red().bold(), project_id);
     let _ = io::stdout().flush();
     let mut confirm_buf = String::new();
     io::stdin()
@@ -316,41 +289,41 @@ fn delete(project_id: String) {
         std::process::exit(1);
     }
     if input.eq(yes) {
-        let prep = match prepare_client(Some(&project_id)) {
+        let request = match get_request(PROJECT_ENDPOINT,Some(&project_id)) {
             Ok(c) => c,
             Err(err) => {
-                eprint!("unable to create client {:?}", err);
+                eprint!("{}: {err}", CLIENT_ERROR.red());
                 std::process::exit(1);
             }
         };
-        let resp = match prep.client.delete(prep.url).send() {
+        let resp = match request.client.delete(request.url).send() {
             Ok(r) => r,
             Err(err) => {
-                eprintln!("Invalid Request {err}");
+                eprint!("{}: {err}", CLIENT_RESPONSE_ERROR.red());
                 std::process::exit(1);
             }
         };
         if resp.status().is_success() {
-            println!("Project Deleted");
+            println!("{}","Project Deleted".green().bold());
         } else if resp.status().is_client_error() {
-            eprintln!("Unable to delete Project:  {:?}", resp);
+            eprintln!("{}: Unable to delete Project:  {:?}", "Error".red(), resp);
             std::process::exit(1);
         }
     }
 }
 
 fn detail(project_id: String) {
-    let prep = match prepare_client(Some(&project_id)) {
+    let request = match get_request(PROJECT_ENDPOINT,Some(&project_id)) {
         Ok(c) => c,
         Err(err) => {
-            eprint!("unable to create client {:?}", err);
+            eprint!("{}: {err}", CLIENT_ERROR.red());
             std::process::exit(1);
         }
     };
-    let resp = match prep.client.get(prep.url).send() {
+    let resp = match request.client.get(request.url).send() {
         Ok(r) => r,
         Err(err) => {
-            eprintln!("Invalid Request {err}");
+            eprint!("{}: {err}", CLIENT_RESPONSE_ERROR.red());
             std::process::exit(1);
         }
     };
@@ -358,7 +331,7 @@ fn detail(project_id: String) {
         let proj: ProjectResponse = match resp.json() {
             Ok(r) => r,
             Err(err) => {
-                eprint!("Unable to parse response json: {err}");
+                eprint!("{}: {err}", "Unable to parse response json".red().bold());
                 std::process::exit(1);
             }
         };
@@ -371,7 +344,7 @@ fn detail(project_id: String) {
         println!("Description:");
         println!("{}", proj.description)
     } else if resp.status().is_client_error(){
-        eprintln!("Unable to find project code");
+        eprintln!("{}: {} Unable to find project code", "Error".red(), resp.status());
     } else{
         eprintln!("Unable to fetch project details:  {:?}", resp.status());
         eprintln!("{:?}", resp.text().ok());

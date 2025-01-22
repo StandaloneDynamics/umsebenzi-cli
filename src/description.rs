@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::Write;
 use std::process::Command;
 use std::env::var;
+use colored::Colorize;
 
 
 static ENV_VARS: &[&str] = &["VISUAL", "EDITOR"];
@@ -58,7 +59,7 @@ pub fn text_editor(data: Option<String>) -> Option<String>{
         std::process::exit(1);    
         }
     }else{
-        eprintln!("Unable to open editor");
+        eprintln!("{}: Unable to find default editor, ensure VISUAL or EDITOR env variable has been set", "Error".red().bold());
         std::process::exit(1);
     }
 
