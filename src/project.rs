@@ -1,47 +1,20 @@
-use crate::service::{get_request, CLIENT_ERROR, CLIENT_RESPONSE_ERROR};
+use crate::service::{delete_confirmation, get_request, RequestType, CLIENT_ERROR, CLIENT_RESPONSE_ERROR};
 use crate::description::text_editor;
+use crate::response::ProjectResponse;
 
 use clap::{Parser, Subcommand};
-use cli_table::{print_stdout, Table, WithTitle};
+use cli_table::{print_stdout, WithTitle};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::{
-    fmt,
-    io::{self, Write},
-};
+use std::io::{self, Write};
 use colored::Colorize;
+
 
 const PROJECT_ENDPOINT: &str = "/projects/";
 const PROJECT_TITLE_ERROR: &str = "Project title expected";
 const PROJECT_CODE_ERROR: &str = "Project code expected";
 const PROJECT_DESCRIPTION_ERROR: &str = "Project description expected";
 
-
-
-#[derive(Serialize, Deserialize, Debug, Table)]
-struct User {
-    id: i32,
-    username: String,
-    email: String,
-}
-impl fmt::Display for User {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.email)
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Table)]
-struct ProjectResponse {
-    id: i32,
-    created_by: User,
-    title: String,
-    #[table(skip)]
-    description: String,
-    code: String,
-    created_at: String,
-    #[table(skip)]
-    modified_at: String,
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ClientErrorResponse {
@@ -272,23 +245,8 @@ fn edit(project_id: String) {
 }
 
 fn delete(project_id: String) {
-    let yes = "Y";
-    let no = "N";
-    print!("{} {} [Y/N]: ", "Are you sure you want to delete project with ID=".red().bold(), project_id);
-    let _ = io::stdout().flush();
-    let mut confirm_buf = String::new();
-    io::stdin()
-        .read_line(&mut confirm_buf)
-        .expect("Expected Y or N");
-    let input = confirm_buf.trim();
-    if input.is_empty() {
-        eprintln!("Expected Y or N");
-        std::process::exit(1);
-    } else if input != yes && input != no {
-        eprintln!("Options are Y or N");
-        std::process::exit(1);
-    }
-    if input.eq(yes) {
+    let is_delete = delete_confirmation(&project_id, RequestType::PROJECT);
+    if is_delete {
         let request = match get_request(PROJECT_ENDPOINT,Some(&project_id)) {
             Ok(c) => c,
             Err(err) => {

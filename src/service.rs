@@ -3,11 +3,29 @@ use crate::config::read_toml_file;
 use anyhow::Result;
 use reqwest::blocking::Client;
 use reqwest::header;
+use std::io::{self, Write};
 use colored::Colorize;
 
 pub const CLIENT_ERROR: &str = "Unable to create request client";
 pub const CLIENT_RESPONSE_ERROR: &str = "Response Error";
+pub const PROJECT_DELETE_CONFIRMATION: &str = "Are you sure you want to delete project with ID=";
+pub const TASK_DELETE_CONFIRMATION: &str = "Are you sure you want to delete task, including subtasks with code=";
 
+
+pub enum RequestType{
+    PROJECT,
+    TASK
+}
+
+impl RequestType {
+    fn value(&self) -> &str{
+        match *self{
+            RequestType::PROJECT => PROJECT_DELETE_CONFIRMATION,
+            RequestType::TASK => TASK_DELETE_CONFIRMATION
+        }
+    }
+    
+}
 
 pub struct RequestClient {
     pub client: Client,
@@ -84,4 +102,29 @@ pub fn prepare_client(endpoint: &str, instance: Option<&String>) -> Result<Reque
 pub fn get_request(endpoint: &str, instance: Option<&String>) -> Result<RequestClient>{
     let prep = prepare_client(endpoint, instance)?;
     Ok(prep)
+}
+
+
+pub fn delete_confirmation(item_id: &String, request: RequestType) -> bool{
+    let yes = "Y";
+    let no = "N";
+    print!("{} {} [Y/N]: ", request.value().red().bold(), item_id);
+    let _ = io::stdout().flush();
+    let mut confirm_buf = String::new();
+    io::stdin()
+        .read_line(&mut confirm_buf)
+        .expect("Expected Y or N");
+    let input = confirm_buf.trim();
+    if input.is_empty() {
+        eprintln!("Expected Y or N");
+        std::process::exit(1);
+    } else if input != yes && input != no {
+        eprintln!("Options are Y or N");
+        std::process::exit(1);
+    }
+    if input.eq(yes){
+        return true;
+    }
+    false
+
 }

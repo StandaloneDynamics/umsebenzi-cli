@@ -2,15 +2,19 @@ mod config;
 mod project;
 mod service;
 mod description;
+mod task;
+mod response;
 
 use clap::{Parser, Subcommand};
 use config::{run as c, ConfigArgs};
 use project::{run as p, ProjectArgs};
+use task::{run as t, TaskArgs};
+
 
 #[derive(Subcommand)]
 enum Command {
     Project(ProjectArgs),
-    Task,
+    Task(TaskArgs),
     Config(ConfigArgs),
 }
 
@@ -25,6 +29,6 @@ fn main() {
     match args.command {
         Command::Config(v) => c(v),
         Command::Project(v) => p(v),
-        Command::Task => println!("Task Subcommands"),
+        Command::Task(v) => t(v)
     }
 }

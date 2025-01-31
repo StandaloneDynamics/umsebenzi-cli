@@ -17,7 +17,7 @@ This tool allows you to interact with the API to manage your tasks
 
 ### Tasks
 
-* Show tasks `umsebenzi task`
+* Show tasks `umsebenzi task list`
 * Add task `umsebenzi task add`
 * Detail task `umsebenzi task detail <task code>`
 * Edit task `umsebenzi task edit <task code>`
