@@ -22,9 +22,11 @@ This tool allows you to interact with the API to manage your tasks
 * Detail task `umsebenzi task detail <task code>`
 * Edit task `umsebenzi task edit <task code>`
 * Delete task `umsebenzi task delete <task code>`
+* Update task status `umsebenzi task status <task code> <task status>`
 
 ## Config
 
 * Show config `umsebenzi config`
 * Add new config `umsebenzi config add`
 * Edit auth `umsebenzi config edit`
+* Show task statuses `umsebenzi config task-status`

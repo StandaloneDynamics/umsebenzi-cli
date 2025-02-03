@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use cli_table::Table;
-use std::{fmt, ops::Sub};
+use std::fmt;
 
 #[derive(Serialize, Deserialize, Debug, Table)]
 pub struct User {
@@ -55,6 +55,7 @@ impl fmt::Display for ProjectTaskResponse {
 pub struct SubTaskResponse{
     title: String,
     code: String,
+    status: String,
     created_at: String
 }
 
@@ -70,23 +71,56 @@ fn display_subtasks(tasks: &Option<Vec<SubTaskResponse>>) -> impl fmt::Display{
     }
 }
 
+fn display_due_date(tasks: &Option<String>) -> impl fmt::Display{
+    if let Some(v) = tasks{
+        format!("{}", v)
+    }else{
+        format!("N/A")
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Table)]
 pub struct TaskResponse{
+    id: i32,
     #[table(skip)]
     project: ProjectTaskResponse,
     pub title: String,
     pub code: String,
+    issue: String,
     #[table(skip)]
     pub description: String,
-    assigned_to: User,
     #[table(skip)]
     pub created_by: User,
     pub status: String,
-    pub due_date: String,
-    pub created_at: String,
+    #[table(display_fn="display_due_date")]
+    pub due_date: Option<String>,
     #[table(skip)]
     modified_at: String,
     #[table(display_fn="display_subtasks")]
     pub subtasks: Option<Vec<SubTaskResponse>>,
-    issue: String
+    pub assigned_to: User,
+    pub created_at: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ClientErrorResponse {
+    pub title: Option<Vec<String>>,
+    pub description: Option<Vec<String>>,
+    pub code: Option<Vec<String>>,
+    pub detail: Option<String>,
+    pub non_field_errors: Option<Vec<String>>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TaskErrorResponse{
+    pub project_id: Option<Vec<String>>,
+    pub title: Option<Vec<String>>,
+    pub description: Option<Vec<String>>,
+    pub status: Option<Vec<String>>,
+    pub issue: Option<Vec<String>>,
+    pub due_date: Option<Vec<String>>,
+    pub assigned_to_id: Option<Vec<String>>,
+    pub parent_id: Option<Vec<String>>,
+    pub detail: Option<String>,
+    pub non_field_errors: Option<Vec<String>>
 }

@@ -1,10 +1,9 @@
 use crate::service::{delete_confirmation, get_request, RequestType, CLIENT_ERROR, CLIENT_RESPONSE_ERROR};
 use crate::description::text_editor;
-use crate::response::ProjectResponse;
+use crate::response::{ProjectResponse, ClientErrorResponse};
 
 use clap::{Parser, Subcommand};
 use cli_table::{print_stdout, WithTitle};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, Write};
 use colored::Colorize;
@@ -15,14 +14,6 @@ const PROJECT_TITLE_ERROR: &str = "Project title expected";
 const PROJECT_CODE_ERROR: &str = "Project code expected";
 const PROJECT_DESCRIPTION_ERROR: &str = "Project description expected";
 
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ClientErrorResponse {
-    title: Option<Vec<String>>,
-    description: Option<Vec<String>>,
-    code: Option<Vec<String>>,
-    detail: Option<String>,
-}
 
 #[derive(Subcommand, Debug)]
 enum ProjectCLI {
@@ -109,7 +100,7 @@ fn add() {
     let mut answer_buf = String::new();
     io::stdin()
         .read_line(&mut answer_buf)
-        .expect(&PROJECT_CODE_ERROR.red());
+        .expect(&PROJECT_DESCRIPTION_ERROR.red());
     let mut description = String::new();
     if answer_buf.trim() == "Y"{
         description = text_editor(None).expect(&PROJECT_DESCRIPTION_ERROR.red().bold());

@@ -4,6 +4,11 @@ mod service;
 mod description;
 mod task;
 mod response;
+mod request;
+mod defaults;
+mod enums;
+
+
 
 use clap::{Parser, Subcommand};
 use config::{run as c, ConfigArgs};

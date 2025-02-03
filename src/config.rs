@@ -7,6 +7,8 @@ use std::io::{self, Write};
 use toml;
 use url;
 
+use crate::defaults::show_status_options;
+
 #[derive(Deserialize, Serialize)]
 pub struct Data {
     pub host: String,
@@ -16,6 +18,7 @@ pub struct Data {
 #[derive(Subcommand, Debug)]
 enum Config {
     Add,
+    TaskStatus
 }
 
 #[derive(Parser, Debug)]
@@ -28,6 +31,7 @@ pub fn run(args: ConfigArgs) {
     if let Some(v) = args.command {
         match v {
             Config::Add => add(),
+            Config::TaskStatus => show_status_options(true),
         }
     } else {
         show();

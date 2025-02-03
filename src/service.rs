@@ -20,8 +20,8 @@ pub enum RequestType{
 impl RequestType {
     fn value(&self) -> &str{
         match *self{
-            RequestType::PROJECT => PROJECT_DELETE_CONFIRMATION,
-            RequestType::TASK => TASK_DELETE_CONFIRMATION
+            Self::PROJECT => PROJECT_DELETE_CONFIRMATION,
+            Self::TASK => TASK_DELETE_CONFIRMATION
         }
     }
     
