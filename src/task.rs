@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use serde::{Deserialize, Serialize};
 
 
 use crate::service::{delete_confirmation, get_request, RequestType, CLIENT_ERROR, CLIENT_RESPONSE_ERROR};
@@ -43,7 +42,7 @@ pub fn run(args: TaskArgs){
     match args.command {
         TaskCLI::Add => add(),
         TaskCLI::List => list(),
-        TaskCLI::Edit { task_id } => println!("Edit task"),
+        TaskCLI::Edit { task_id } => edit(task_id),
         TaskCLI::Detail { task_id } => detail(task_id),
         TaskCLI::Delete { task_id } => delete(task_id),
         TaskCLI::Status { task_id, status } => status_update(task_id, status),
@@ -282,7 +281,6 @@ fn add(){
         }
         due_date = Some(due_buf.trim().to_string());
     }
-
     let task_request = TaskRequest{
         project_id: proj_id,
         title: title_buf,
@@ -386,6 +384,7 @@ fn edit(task_id: String){
                 std::process::exit(1);
             }
         };
+        
         print!("{}: ","Title [leave blank to use existing]".green().bold());
         let _ = io::stdout().flush();
         let mut title_buf = String::new();
@@ -408,15 +407,66 @@ fn edit(task_id: String){
             description_buf =  text_editor(Some(task.description)).expect(&TASK_DESCRIPTION_ERROR.red());
         }
 
-        print!("{}: ", "Code: [leave blank to use existing]".green().bold());
+        show_issue_options();
+        print!("{}: ", "Issue [leave blank to use existing]".green().bold());
         let _ = io::stdout().flush();
-        let mut code_buf = String::new();
+        let mut issue_buf = String::new();
         io::stdin()
-            .read_line(&mut code_buf)
-            .expect(&PROJECT_CODE_ERROR.red());
-        if code_buf.trim().is_empty() {
-            code_buf = proj.code
+            .read_line(&mut issue_buf)
+            .expect(&TASK_ISSUE_ERROR.red().bold());
+        if issue_buf.trim().is_empty() {
+            issue_buf = Issue::from_api_str(&task.issue).expect("invalid task issue");
         }
+        let issue = match Issue::from_str(&issue_buf.trim()){
+            Ok(i) => i,
+            Err(err) => {
+                eprintln!("{}: {err}", TASK_ISSUE_ERROR.red().bold());
+                std::process::exit(1);
+            }
+        };
+        let current_issue = Issue::from_api_str(&task.issue).expect("Invalid task status");
+        if current_issue == Issue::EPIC && issue == Issue::SUBTASK{
+            // if changing from Epic to subtask, must have parent.
+        }else if current_issue == Issue::SUBTASK && issue == Issue::EPIC{
+            // if changing from subtask to epic, remove parent.
+        }
+
+        let status = TaskStatus::from_api_string(&task.status).expect("Invalid task status");
+        let task_upadate = TaskRequest{
+            project_id: task.project.id,
+            title: title_buf,
+            description: description_buf,
+            issue: issue.to_value(),
+            due_date: task.due_date,
+            assigned_to_id: task.assigned_to.id,
+            parent_id: task.parent,
+            status: status.to_value()
+        };
+
+        let request = match get_request(TASK_ENDPOINT,Some(&task_id)) {
+            Ok(c) => c,
+            Err(err) => {
+                eprint!("{}: {err}", CLIENT_ERROR.red());
+                std::process::exit(1);
+            }
+        };
+        let resp = match request.client.put(request.url).json(&task_upadate).send() {
+            Ok(r) => r,
+            Err(err) => {
+                eprint!("{}: {err}", CLIENT_RESPONSE_ERROR.red());
+                std::process::exit(1);
+            }
+        };
+        if resp.status().is_success() {
+            println!("{}", "Task Updated".green().bold())
+        } else if resp.status().is_client_error() {
+            let response: ClientErrorResponse = resp.json().unwrap();
+            println!("{}: {:?}", "error".red(), response);
+        } else {
+            println!("{}: {}", "Error".red().bold(),resp.status());
+            println!("{}: {}", "Error".red().bold(), resp.text().unwrap());
+        };
+
         
     }else if resp.status().is_client_error(){
         eprintln!("{}: Unable to find task code", "Error".red());

@@ -4,7 +4,7 @@ use std::fmt;
 
 #[derive(Serialize, Deserialize, Debug, Table)]
 pub struct User {
-    id: i32,
+    pub id: i32,
     username: String,
     email: String,
 }
@@ -36,7 +36,8 @@ impl fmt::Display for ProjectResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Table)]
-struct ProjectTaskResponse{
+pub struct ProjectTaskResponse{
+    pub id: i32,
     title: String,
     code: String,
     created_at: String
@@ -79,14 +80,24 @@ fn display_due_date(tasks: &Option<String>) -> impl fmt::Display{
     }
 }
 
+fn display_parent(tasks: &Option<i32>) -> impl fmt::Display{
+    if let Some(v) = tasks{
+        format!("{}", v)
+    }else{
+        format!("N/A")
+    }
+}
+
+
+
 #[derive(Serialize, Deserialize, Debug, Table)]
 pub struct TaskResponse{
     id: i32,
     #[table(skip)]
-    project: ProjectTaskResponse,
+    pub project: ProjectTaskResponse,
     pub title: String,
     pub code: String,
-    issue: String,
+    pub issue: String,
     #[table(skip)]
     pub description: String,
     #[table(skip)]
@@ -100,6 +111,8 @@ pub struct TaskResponse{
     pub subtasks: Option<Vec<SubTaskResponse>>,
     pub assigned_to: User,
     pub created_at: String,
+    #[table(display_fn="display_parent")]
+    pub parent: Option<i32>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
