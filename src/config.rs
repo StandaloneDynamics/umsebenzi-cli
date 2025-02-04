@@ -1,13 +1,14 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::fs::File;
 use std::io::{self, Write};
+use std::{fs::{self, File}, path};
 use toml;
 use url;
 
 use crate::defaults::show_status_options;
+
+const CONFIG_DIR :&str = "XDG_CONFIG_HOME";
 
 #[derive(Deserialize, Serialize)]
 pub struct Data {
@@ -89,21 +90,53 @@ fn show() {
             println!("Host: {}", d.host);
             println!("Token: {}", d.credentials);
         }
-        Err(_) => {
-            eprintln!("Unable to read toml file");
+        Err(err) => {
+            eprintln!("Unable to read toml file: {err}");
             std::process::exit(1);
         }
     }
 }
 
+fn config_file_path() -> Result<path::PathBuf>{
+    let config_dir = std::env::var(CONFIG_DIR)?;
+    let path = path::Path::new(&config_dir).join("umsebenzi");
+    if path.is_dir(){
+        Ok(path)
+    }else{
+        let _ = fs::create_dir(&path); 
+        Ok(path)
+    }
+
+}
 pub fn read_toml_file() -> Result<Data> {
-    let toml_str = fs::read_to_string("umsebenzi.toml")?;
-    let file: Data = toml::from_str(&toml_str)?;
-    Ok(file)
+    let directory = match config_file_path() {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Can't create config directory: {err}");
+            std::process::exit(1)
+        }
+    };
+    let file_path = path::Path::new(&directory).join("umsebenzi.toml");
+    if file_path.is_file(){
+        let toml_str = fs::read_to_string(file_path)?;
+        let file: Data = toml::from_str(&toml_str)?;
+        return Ok(file)
+    }
+    Err(anyhow!("umsebenzi.toml file not found"))
+    
 }
 fn write_toml_file(data: &Data) -> Result<()> {
+    let directory = match config_file_path() {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Can't create config directory: {err}");
+            std::process::exit(1)
+        }
+    };
+    let file_path = path::Path::new(&directory).join("umsebenzi.toml");
+
     let toml_string = toml::to_string(data)?;
-    let mut file = File::create("umsebenzi.toml")?;
+    let mut file = File::create(&file_path)?;
     file.write_all(toml_string.as_bytes())?;
     Ok(())
 }
