@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 
 use crate::service::{delete_confirmation, get_request, RequestType, CLIENT_ERROR, CLIENT_RESPONSE_ERROR};
-use crate::response::{TaskResponse, ClientErrorResponse, TaskErrorResponse};
+use crate::response::{TaskResponse, TaskErrorResponse};
 use colored::Colorize;
 use cli_table::{print_stdout, WithTitle};
 use std::collections::HashMap;
@@ -110,6 +110,7 @@ fn detail(task_id: String){
         println!("{}: {}", "Title".green().bold(),task.title);
         println!("{}: {}", "Code".green().bold(), task.code);
         println!("{}: {}", "Status".green().bold(),task.status);
+        println!("{}: {}", "Issue".green().bold(),task.issue);
         println!("{}: {}", "Due Date".green().bold(), task.due_date.unwrap_or_default());
         println!("{}: {}", "Created By".green().bold(), task.created_by);
         println!("{}: {}", "Created At".green().bold(), task.created_at);
@@ -220,7 +221,7 @@ fn add(){
     };
     
     let mut parent_id = None;
-    if issue == Issue::SubTask{
+    if issue == Issue::SUBTASK{
         print!("{}: ", "Parent Task ID".green().bold());
         let _ = io::stdout().flush();
         let mut parent_buf = String::new();
@@ -408,27 +409,50 @@ fn edit(task_id: String){
         }
 
         show_issue_options();
+        let issue: Issue;
+        let current_issue = Issue::from_api_str(&task.issue).expect(TASK_ISSUE_ERROR);
         print!("{}: ", "Issue [leave blank to use existing]".green().bold());
         let _ = io::stdout().flush();
         let mut issue_buf = String::new();
         io::stdin()
             .read_line(&mut issue_buf)
             .expect(&TASK_ISSUE_ERROR.red().bold());
+
         if issue_buf.trim().is_empty() {
-            issue_buf = Issue::from_api_str(&task.issue).expect("invalid task issue");
+            issue = current_issue.clone();
+        }else{
+            issue = match Issue::from_str(&issue_buf.trim()){
+                Ok(i) => i,
+                Err(err) => {
+                    eprintln!("{}: {err}", TASK_ISSUE_ERROR.red().bold());
+                    std::process::exit(1);
+                }
+            };
         }
-        let issue = match Issue::from_str(&issue_buf.trim()){
-            Ok(i) => i,
-            Err(err) => {
-                eprintln!("{}: {err}", TASK_ISSUE_ERROR.red().bold());
+        let mut parent_id = None;
+        if current_issue == Issue::EPIC && issue == Issue::SUBTASK{
+            print!("{}: ", "Parent Task ID".green().bold());
+            let _ = io::stdout().flush();
+            let mut parent_buf = String::new();
+            io::stdin()
+                .read_line(&mut parent_buf)
+                .expect(&TASK_PARENT_ERROR.red().bold());
+            if parent_buf.trim().is_empty() {
+                eprintln!("{}", TASK_PARENT_ERROR.red().bold());
                 std::process::exit(1);
             }
-        };
-        let current_issue = Issue::from_api_str(&task.issue).expect("Invalid task status");
-        if current_issue == Issue::EPIC && issue == Issue::SUBTASK{
-            // if changing from Epic to subtask, must have parent.
+            match parent_buf.trim().parse::<i32>(){
+                Ok(i) => {parent_id = Some(i);},
+                Err(_) =>{
+                    eprintln!("{}", "Task parent ID is should be a number".red().bold());
+                    std::process::exit(1);
+                }
+            };
+
         }else if current_issue == Issue::SUBTASK && issue == Issue::EPIC{
-            // if changing from subtask to epic, remove parent.
+            parent_id = None;
+        }else{
+            parent_id = task.parent
         }
 
         let status = TaskStatus::from_api_string(&task.status).expect("Invalid task status");
@@ -439,7 +463,7 @@ fn edit(task_id: String){
             issue: issue.to_value(),
             due_date: task.due_date,
             assigned_to_id: task.assigned_to.id,
-            parent_id: task.parent,
+            parent_id: parent_id,
             status: status.to_value()
         };
 
@@ -460,7 +484,7 @@ fn edit(task_id: String){
         if resp.status().is_success() {
             println!("{}", "Task Updated".green().bold())
         } else if resp.status().is_client_error() {
-            let response: ClientErrorResponse = resp.json().unwrap();
+            let response: TaskErrorResponse = resp.json().unwrap();
             println!("{}: {:?}", "error".red(), response);
         } else {
             println!("{}: {}", "Error".red().bold(),resp.status());

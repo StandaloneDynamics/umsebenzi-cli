@@ -128,3 +128,16 @@ pub fn delete_confirmation(item_id: &String, request: RequestType) -> bool{
     false
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn request_client(){
+        let item_id = "1".to_string();
+        let request = get_request("/endpoint/", Some(&item_id));
+        assert!(request.is_ok());
+        assert_eq!(request.is_ok_and(|r| r.url == "http://localhost:8000/api/v1/endpoint/1/"), true);
+    }
+}

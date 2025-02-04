@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Issue{
     EPIC,
     SUBTASK,
@@ -80,5 +80,42 @@ impl TaskStatus{
             "ARCHIVE" => Ok(TaskStatus::ARCHIVE),
             _ => Err(anyhow!("Invalid task status"))
         }
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn issue_to_value(){
+        let epic = Issue::EPIC;
+        assert_eq!(epic.to_value(), 1);
+    }
+
+    #[test]
+    fn issue_from_str_wrong(){
+        let epic = Issue::from_str("cats");
+        assert!(epic.is_err());
+    }
+
+    #[test]
+    fn issue_from_str_correct(){
+        let epic = Issue::from_str("1");
+        assert!(epic.is_ok());
+    }
+
+    #[test]
+    fn issue_from_api_correct(){
+        let epic = Issue::from_api_str("EPIC");
+        assert!(epic.is_ok());
+    }
+
+    #[test]
+    fn issue_from_api_wrong(){
+        let epic = Issue::from_api_str("WRONG");
+        assert!(epic.is_err());
     }
 }
