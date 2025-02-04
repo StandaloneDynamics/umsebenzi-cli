@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
 use cli_table::Table;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Serialize, Deserialize, Debug, Table)]
@@ -13,8 +13,6 @@ impl fmt::Display for User {
         write!(f, "{}", self.email)
     }
 }
-
-
 
 #[derive(Serialize, Deserialize, Debug, Table)]
 pub struct ProjectResponse {
@@ -36,11 +34,11 @@ impl fmt::Display for ProjectResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Table)]
-pub struct ProjectTaskResponse{
+pub struct ProjectTaskResponse {
     pub id: i32,
     title: String,
     code: String,
-    created_at: String
+    created_at: String,
 }
 
 impl fmt::Display for ProjectTaskResponse {
@@ -49,49 +47,44 @@ impl fmt::Display for ProjectTaskResponse {
     }
 }
 
-
-
-
 #[derive(Serialize, Deserialize, Debug, Table)]
-pub struct SubTaskResponse{
+pub struct SubTaskResponse {
     title: String,
     code: String,
     status: String,
-    created_at: String
+    created_at: String,
 }
 
-fn display_subtasks(tasks: &Option<Vec<SubTaskResponse>>) -> impl fmt::Display{
-    if let Some(v) = tasks{
-        if v.is_empty(){
+fn display_subtasks(tasks: &Option<Vec<SubTaskResponse>>) -> impl fmt::Display {
+    if let Some(v) = tasks {
+        if v.is_empty() {
             format!("No")
-        }else{
+        } else {
             format!("Yes")
         }
-    }else{
+    } else {
         format!("----")
     }
 }
 
-fn display_due_date(tasks: &Option<String>) -> impl fmt::Display{
-    if let Some(v) = tasks{
+fn display_due_date(tasks: &Option<String>) -> impl fmt::Display {
+    if let Some(v) = tasks {
         format!("{}", v)
-    }else{
+    } else {
         format!("N/A")
     }
 }
 
-fn display_parent(tasks: &Option<i32>) -> impl fmt::Display{
-    if let Some(v) = tasks{
+fn display_parent(tasks: &Option<i32>) -> impl fmt::Display {
+    if let Some(v) = tasks {
         format!("{}", v)
-    }else{
+    } else {
         format!("N/A")
     }
 }
-
-
 
 #[derive(Serialize, Deserialize, Debug, Table)]
-pub struct TaskResponse{
+pub struct TaskResponse {
     id: i32,
     #[table(skip)]
     pub project: ProjectTaskResponse,
@@ -103,16 +96,16 @@ pub struct TaskResponse{
     #[table(skip)]
     pub created_by: User,
     pub status: String,
-    #[table(display_fn="display_due_date")]
+    #[table(display_fn = "display_due_date")]
     pub due_date: Option<String>,
     #[table(skip)]
     modified_at: String,
-    #[table(display_fn="display_subtasks")]
+    #[table(display_fn = "display_subtasks")]
     pub subtasks: Option<Vec<SubTaskResponse>>,
     pub assigned_to: User,
     pub created_at: String,
-    #[table(display_fn="display_parent")]
-    pub parent: Option<i32>
+    #[table(display_fn = "display_parent")]
+    pub parent: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -121,11 +114,11 @@ pub struct ClientErrorResponse {
     pub description: Option<Vec<String>>,
     pub code: Option<Vec<String>>,
     pub detail: Option<String>,
-    pub non_field_errors: Option<Vec<String>>
+    pub non_field_errors: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct TaskErrorResponse{
+pub struct TaskErrorResponse {
     pub project_id: Option<Vec<String>>,
     pub title: Option<Vec<String>>,
     pub description: Option<Vec<String>>,
@@ -135,5 +128,5 @@ pub struct TaskErrorResponse{
     pub assigned_to_id: Option<Vec<String>>,
     pub parent_id: Option<Vec<String>>,
     pub detail: Option<String>,
-    pub non_field_errors: Option<Vec<String>>
+    pub non_field_errors: Option<Vec<String>>,
 }

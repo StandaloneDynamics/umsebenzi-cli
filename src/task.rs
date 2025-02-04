@@ -1,17 +1,17 @@
 use clap::{Parser, Subcommand};
 
-
-use crate::service::{delete_confirmation, get_request, RequestType, CLIENT_ERROR, CLIENT_RESPONSE_ERROR};
-use crate::response::{TaskResponse, TaskErrorResponse};
-use colored::Colorize;
+use crate::defaults::{show_issue_options, show_status_options};
+use crate::description::text_editor;
+use crate::enums::{Issue, TaskStatus};
+use crate::request::TaskRequest;
+use crate::response::{TaskErrorResponse, TaskResponse};
+use crate::service::{
+    delete_confirmation, get_request, RequestType, CLIENT_ERROR, CLIENT_RESPONSE_ERROR,
+};
 use cli_table::{print_stdout, WithTitle};
+use colored::Colorize;
 use std::collections::HashMap;
 use std::io::{self, Write};
-use crate::description::text_editor;
-use crate::defaults::{show_issue_options, show_status_options};
-use crate::enums::{TaskStatus, Issue};
-use crate::request::TaskRequest;
-
 
 const TASK_ENDPOINT: &str = "/tasks/";
 const TASK_TITLE_ERROR: &str = "Task title expected";
@@ -23,22 +23,22 @@ const TASK_DATE_ERROR: &str = "Task date expected";
 const TASK_STATUS_ERROR: &str = "Task status expected";
 
 #[derive(Subcommand, Debug)]
-enum TaskCLI{
+enum TaskCLI {
     List,
     Add,
     Detail { task_id: String },
     Edit { task_id: String },
     Delete { task_id: String },
-    Status {task_id: String, status: String}
-} 
+    Status { task_id: String, status: String },
+}
 
 #[derive(Parser, Debug)]
-pub struct TaskArgs{
+pub struct TaskArgs {
     #[command(subcommand)]
     command: TaskCLI,
 }
 
-pub fn run(args: TaskArgs){
+pub fn run(args: TaskArgs) {
     match args.command {
         TaskCLI::Add => add(),
         TaskCLI::List => list(),
@@ -46,14 +46,11 @@ pub fn run(args: TaskArgs){
         TaskCLI::Detail { task_id } => detail(task_id),
         TaskCLI::Delete { task_id } => delete(task_id),
         TaskCLI::Status { task_id, status } => status_update(task_id, status),
-
-        
     }
 }
 
-
-fn list(){
-    let request = match get_request(TASK_ENDPOINT, None){
+fn list() {
+    let request = match get_request(TASK_ENDPOINT, None) {
         Ok(r) => r,
         Err(err) => {
             eprint!("{}: {err}", CLIENT_ERROR.red().bold());
@@ -67,7 +64,6 @@ fn list(){
             eprintln!("{}: {err}", CLIENT_RESPONSE_ERROR.red().bold());
             std::process::exit(1);
         }
-        
     };
 
     if resp.status().is_success() {
@@ -84,7 +80,7 @@ fn list(){
     }
 }
 
-fn detail(task_id: String){
+fn detail(task_id: String) {
     let request = match get_request(TASK_ENDPOINT, Some(&task_id)) {
         Ok(c) => c,
         Err(err) => {
@@ -99,7 +95,7 @@ fn detail(task_id: String){
             std::process::exit(1);
         }
     };
-    if resp.status().is_success(){
+    if resp.status().is_success() {
         let task: TaskResponse = match resp.json() {
             Ok(r) => r,
             Err(err) => {
@@ -107,20 +103,24 @@ fn detail(task_id: String){
                 std::process::exit(1);
             }
         };
-        println!("{}: {}", "Title".green().bold(),task.title);
+        println!("{}: {}", "Title".green().bold(), task.title);
         println!("{}: {}", "Code".green().bold(), task.code);
-        println!("{}: {}", "Status".green().bold(),task.status);
-        println!("{}: {}", "Issue".green().bold(),task.issue);
-        println!("{}: {}", "Due Date".green().bold(), task.due_date.unwrap_or_default());
+        println!("{}: {}", "Status".green().bold(), task.status);
+        println!("{}: {}", "Issue".green().bold(), task.issue);
+        println!(
+            "{}: {}",
+            "Due Date".green().bold(),
+            task.due_date.unwrap_or_default()
+        );
         println!("{}: {}", "Created By".green().bold(), task.created_by);
         println!("{}: {}", "Created At".green().bold(), task.created_at);
         println!("");
         println!("{}:", "Description".green().bold());
         println!("{}", task.description);
         println!("");
-        
+
         if let Some(t) = task.subtasks {
-            if !t.is_empty(){
+            if !t.is_empty() {
                 println!("{}:", "Subtasks".green().bold());
                 let _ = print_stdout(t.with_title()).is_ok();
             }
@@ -128,10 +128,10 @@ fn detail(task_id: String){
     }
 }
 
-fn delete(task_id: String){
+fn delete(task_id: String) {
     let is_delete = delete_confirmation(&task_id, RequestType::TASK);
-    if is_delete{
-        let request = match get_request(TASK_ENDPOINT,Some(&task_id)) {
+    if is_delete {
+        let request = match get_request(TASK_ENDPOINT, Some(&task_id)) {
             Ok(c) => c,
             Err(err) => {
                 eprint!("{}: {err}", CLIENT_ERROR.red());
@@ -146,17 +146,15 @@ fn delete(task_id: String){
             }
         };
         if resp.status().is_success() {
-            println!("{}","Task Deleted".green().bold());
+            println!("{}", "Task Deleted".green().bold());
         } else if resp.status().is_client_error() {
             eprintln!("{}: Unable to delete Task:  {:?}", "Error".red(), resp);
             std::process::exit(1);
         }
     }
-
 }
 
-
-fn add(){
+fn add() {
     println!("{}", "Create a new task".green().bold());
 
     print!("{}: ", "Project [ID]".green().bold());
@@ -169,11 +167,11 @@ fn add(){
         eprintln!("{}", TASK_PROJECT_ERROR.red().bold());
         std::process::exit(1);
     }
-    let proj_id = match project_buf.trim().parse::<i32>(){
+    let proj_id = match project_buf.trim().parse::<i32>() {
         Ok(i) => i,
-        Err(_) =>{
+        Err(_) => {
             eprintln!("{}", "Project ID is should be a number".red().bold());
-        std::process::exit(1);
+            std::process::exit(1);
         }
     };
 
@@ -188,16 +186,19 @@ fn add(){
         std::process::exit(1);
     }
 
-    print!("{}: ","Description [type 'Y' to open editor]".green().bold());
+    print!(
+        "{}: ",
+        "Description [type 'Y' to open editor]".green().bold()
+    );
     let _ = io::stdout().flush();
     let mut answer_buf = String::new();
     io::stdin()
         .read_line(&mut answer_buf)
         .expect(&TASK_DESCRIPTION_ERROR.red());
     let mut description = String::new();
-    if answer_buf.trim() == "Y"{
+    if answer_buf.trim() == "Y" {
         description = text_editor(None).expect(&TASK_DESCRIPTION_ERROR.red().bold());
-    }else{
+    } else {
         eprintln!("{}", "Invalid Command expected Y".red().bold());
         std::process::exit(1);
     }
@@ -212,16 +213,16 @@ fn add(){
     if issue_buf.trim().is_empty() {
         issue_buf = "1".to_string();
     }
-    let issue = match Issue::from_str(&issue_buf.trim()){
+    let issue = match Issue::from_str(&issue_buf.trim()) {
         Ok(i) => i,
         Err(err) => {
             eprintln!("{}: {err}", TASK_ISSUE_ERROR.red().bold());
             std::process::exit(1);
         }
     };
-    
+
     let mut parent_id = None;
-    if issue == Issue::SUBTASK{
+    if issue == Issue::SUBTASK {
         print!("{}: ", "Parent Task ID".green().bold());
         let _ = io::stdout().flush();
         let mut parent_buf = String::new();
@@ -232,25 +233,25 @@ fn add(){
             eprintln!("{}", TASK_PARENT_ERROR.red().bold());
             std::process::exit(1);
         }
-        match parent_buf.trim().parse::<i32>(){
-            Ok(i) => {parent_id = Some(i);},
-            Err(_) =>{
+        match parent_buf.trim().parse::<i32>() {
+            Ok(i) => {
+                parent_id = Some(i);
+            }
+            Err(_) => {
                 eprintln!("{}", "Task parent ID is should be a number".red().bold());
                 std::process::exit(1);
             }
         };
-
     }
     show_status_options(false);
     print!("{}: ", "Status [default=1]".green().bold());
     let _ = io::stdout().flush();
     let mut status_buf = String::new();
-    io::stdin()
-        .read_line(&mut status_buf).unwrap();
+    io::stdin().read_line(&mut status_buf).unwrap();
     if status_buf.trim().is_empty() {
         status_buf = "1".to_string();
     }
-    let status = match TaskStatus::from_str(&status_buf.trim()){
+    let status = match TaskStatus::from_str(&status_buf.trim()) {
         Ok(s) => s,
         Err(err) => {
             eprintln!("{}: {err}", TASK_STATUS_ERROR.red().bold());
@@ -269,7 +270,7 @@ fn add(){
         eprintln!("{}", &"answer Y or N".red().bold());
         std::process::exit(1);
     }
-    if date_buf.trim() == "Y"{
+    if date_buf.trim() == "Y" {
         print!("{}: ", "Due Date [YYYY-MM-DD]".green().bold());
         let _ = io::stdout().flush();
         let mut due_buf = String::new();
@@ -282,7 +283,7 @@ fn add(){
         }
         due_date = Some(due_buf.trim().to_string());
     }
-    let task_request = TaskRequest{
+    let task_request = TaskRequest {
         project_id: proj_id,
         title: title_buf,
         description: description,
@@ -290,7 +291,7 @@ fn add(){
         issue: issue.to_value(),
         assigned_to_id: 1,
         parent_id: parent_id,
-        due_date: due_date
+        due_date: due_date,
     };
 
     let request = match get_request(TASK_ENDPOINT, None) {
@@ -313,16 +314,13 @@ fn add(){
         let response: TaskErrorResponse = resp.json().unwrap();
         println!("{}: {:?}", "error".red(), response);
     } else {
-        println!("{}: {}", "Error".red().bold(),resp.status());
+        println!("{}: {}", "Error".red().bold(), resp.status());
         println!("{}: {}", "Error".red().bold(), resp.text().unwrap());
     };
-
-
-    
 }
 
-fn status_update(task_id: String, status: String){
-    let new_status = match TaskStatus::from_str(&status){
+fn status_update(task_id: String, status: String) {
+    let new_status = match TaskStatus::from_str(&status) {
         Ok(s) => s,
         Err(err) => {
             eprintln!("{}: {err}", TASK_STATUS_ERROR.red().bold());
@@ -336,7 +334,7 @@ fn status_update(task_id: String, status: String){
             std::process::exit(1);
         }
     };
-    let mut data  = HashMap::new();
+    let mut data = HashMap::new();
     data.insert("status", new_status.to_value());
 
     let resp = match request.client.patch(request.url).json(&data).send() {
@@ -352,15 +350,12 @@ fn status_update(task_id: String, status: String){
         let response: TaskErrorResponse = resp.json().unwrap();
         println!("{}: {:?}", "error".red(), response);
     } else {
-        println!("{}: {}", "Error".red().bold(),resp.status());
+        println!("{}: {}", "Error".red().bold(), resp.status());
         println!("{}: {}", "Error".red().bold(), resp.text().unwrap());
     };
-
-
 }
 
-
-fn edit(task_id: String){
+fn edit(task_id: String) {
     let task: TaskResponse;
     let request = match get_request(TASK_ENDPOINT, Some(&task_id)) {
         Ok(c) => c,
@@ -385,8 +380,8 @@ fn edit(task_id: String){
                 std::process::exit(1);
             }
         };
-        
-        print!("{}: ","Title [leave blank to use existing]".green().bold());
+
+        print!("{}: ", "Title [leave blank to use existing]".green().bold());
         let _ = io::stdout().flush();
         let mut title_buf = String::new();
         io::stdin()
@@ -396,7 +391,12 @@ fn edit(task_id: String){
             title_buf = task.title
         }
 
-        print!("{}: ", "Description: [Type E to edit. leave blank to use existing]".green().bold());
+        print!(
+            "{}: ",
+            "Description: [Type E to edit. leave blank to use existing]"
+                .green()
+                .bold()
+        );
         let _ = io::stdout().flush();
         let mut description_buf = String::new();
         io::stdin()
@@ -404,8 +404,9 @@ fn edit(task_id: String){
             .expect(&TASK_DESCRIPTION_ERROR.red());
         if description_buf.trim().is_empty() {
             description_buf = task.description
-        }else if description_buf.trim() == "E" {
-            description_buf =  text_editor(Some(task.description)).expect(&TASK_DESCRIPTION_ERROR.red());
+        } else if description_buf.trim() == "E" {
+            description_buf =
+                text_editor(Some(task.description)).expect(&TASK_DESCRIPTION_ERROR.red());
         }
 
         show_issue_options();
@@ -420,8 +421,8 @@ fn edit(task_id: String){
 
         if issue_buf.trim().is_empty() {
             issue = current_issue.clone();
-        }else{
-            issue = match Issue::from_str(&issue_buf.trim()){
+        } else {
+            issue = match Issue::from_str(&issue_buf.trim()) {
                 Ok(i) => i,
                 Err(err) => {
                     eprintln!("{}: {err}", TASK_ISSUE_ERROR.red().bold());
@@ -430,7 +431,7 @@ fn edit(task_id: String){
             };
         }
         let mut parent_id = None;
-        if current_issue == Issue::EPIC && issue == Issue::SUBTASK{
+        if current_issue == Issue::EPIC && issue == Issue::SUBTASK {
             print!("{}: ", "Parent Task ID".green().bold());
             let _ = io::stdout().flush();
             let mut parent_buf = String::new();
@@ -441,22 +442,23 @@ fn edit(task_id: String){
                 eprintln!("{}", TASK_PARENT_ERROR.red().bold());
                 std::process::exit(1);
             }
-            match parent_buf.trim().parse::<i32>(){
-                Ok(i) => {parent_id = Some(i);},
-                Err(_) =>{
+            match parent_buf.trim().parse::<i32>() {
+                Ok(i) => {
+                    parent_id = Some(i);
+                }
+                Err(_) => {
                     eprintln!("{}", "Task parent ID is should be a number".red().bold());
                     std::process::exit(1);
                 }
             };
-
-        }else if current_issue == Issue::SUBTASK && issue == Issue::EPIC{
+        } else if current_issue == Issue::SUBTASK && issue == Issue::EPIC {
             parent_id = None;
-        }else{
+        } else {
             parent_id = task.parent
         }
 
         let status = TaskStatus::from_api_string(&task.status).expect("Invalid task status");
-        let task_upadate = TaskRequest{
+        let task_upadate = TaskRequest {
             project_id: task.project.id,
             title: title_buf,
             description: description_buf,
@@ -464,10 +466,10 @@ fn edit(task_id: String){
             due_date: task.due_date,
             assigned_to_id: task.assigned_to.id,
             parent_id: parent_id,
-            status: status.to_value()
+            status: status.to_value(),
         };
 
-        let request = match get_request(TASK_ENDPOINT,Some(&task_id)) {
+        let request = match get_request(TASK_ENDPOINT, Some(&task_id)) {
             Ok(c) => c,
             Err(err) => {
                 eprint!("{}: {err}", CLIENT_ERROR.red());
@@ -487,15 +489,17 @@ fn edit(task_id: String){
             let response: TaskErrorResponse = resp.json().unwrap();
             println!("{}: {:?}", "error".red(), response);
         } else {
-            println!("{}: {}", "Error".red().bold(),resp.status());
+            println!("{}: {}", "Error".red().bold(), resp.status());
             println!("{}: {}", "Error".red().bold(), resp.text().unwrap());
         };
-
-        
-    }else if resp.status().is_client_error(){
+    } else if resp.status().is_client_error() {
         eprintln!("{}: Unable to find task code", "Error".red());
-    } else{
-        eprintln!("{}: Unable to fetch task details:  {:?}", "Error".red().bold(), resp.status());
-        eprintln!("{}: {:?}", "Error".red().bold(),resp.text().ok());
+    } else {
+        eprintln!(
+            "{}: Unable to fetch task details:  {:?}",
+            "Error".red().bold(),
+            resp.status()
+        );
+        eprintln!("{}: {:?}", "Error".red().bold(), resp.text().ok());
     }
 }

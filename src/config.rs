@@ -2,13 +2,16 @@ use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
-use std::{fs::{self, File}, path};
+use std::{
+    fs::{self, File},
+    path,
+};
 use toml;
 use url;
 
 use crate::defaults::show_status_options;
 
-const CONFIG_DIR :&str = "XDG_CONFIG_HOME";
+const CONFIG_DIR: &str = "XDG_CONFIG_HOME";
 
 #[derive(Deserialize, Serialize)]
 pub struct Data {
@@ -19,7 +22,7 @@ pub struct Data {
 #[derive(Subcommand, Debug)]
 enum Config {
     Add,
-    TaskStatus
+    TaskStatus,
 }
 
 #[derive(Parser, Debug)]
@@ -97,16 +100,15 @@ fn show() {
     }
 }
 
-fn config_file_path() -> Result<path::PathBuf>{
+fn config_file_path() -> Result<path::PathBuf> {
     let config_dir = std::env::var(CONFIG_DIR)?;
     let path = path::Path::new(&config_dir).join("umsebenzi");
-    if path.is_dir(){
+    if path.is_dir() {
         Ok(path)
-    }else{
-        let _ = fs::create_dir(&path); 
+    } else {
+        let _ = fs::create_dir(&path);
         Ok(path)
     }
-
 }
 pub fn read_toml_file() -> Result<Data> {
     let directory = match config_file_path() {
@@ -117,13 +119,12 @@ pub fn read_toml_file() -> Result<Data> {
         }
     };
     let file_path = path::Path::new(&directory).join("umsebenzi.toml");
-    if file_path.is_file(){
+    if file_path.is_file() {
         let toml_str = fs::read_to_string(file_path)?;
         let file: Data = toml::from_str(&toml_str)?;
-        return Ok(file)
+        return Ok(file);
     }
     Err(anyhow!("umsebenzi.toml file not found"))
-    
 }
 fn write_toml_file(data: &Data) -> Result<()> {
     let directory = match config_file_path() {

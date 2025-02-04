@@ -1,15 +1,15 @@
-pub fn show_issue_options(){
+pub fn show_issue_options() {
     println!();
     println!("Select task issue");
     println!("1) Epic");
     println!("2) Subtask");
 }
 
-pub fn show_status_options(is_config: bool){
+pub fn show_status_options(is_config: bool) {
     println!();
-    if is_config{
+    if is_config {
         println!("Task Statues");
-    }else{
+    } else {
         println!("Select task status");
     }
     println!("1) Draft");
@@ -19,5 +19,4 @@ pub fn show_status_options(is_config: bool){
     println!("5) Review");
     println!("6) Complete");
     println!("7) Archive");
-
 }

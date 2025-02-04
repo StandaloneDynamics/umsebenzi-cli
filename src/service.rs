@@ -1,30 +1,29 @@
-use crate::config::Data;
 use crate::config::read_toml_file;
+use crate::config::Data;
 use anyhow::Result;
+use colored::Colorize;
 use reqwest::blocking::Client;
 use reqwest::header;
 use std::io::{self, Write};
-use colored::Colorize;
 
 pub const CLIENT_ERROR: &str = "Unable to create request client";
 pub const CLIENT_RESPONSE_ERROR: &str = "Response Error";
 pub const PROJECT_DELETE_CONFIRMATION: &str = "Are you sure you want to delete project with ID=";
-pub const TASK_DELETE_CONFIRMATION: &str = "Are you sure you want to delete task, including subtasks with code=";
+pub const TASK_DELETE_CONFIRMATION: &str =
+    "Are you sure you want to delete task, including subtasks with code=";
 
-
-pub enum RequestType{
+pub enum RequestType {
     PROJECT,
-    TASK
+    TASK,
 }
 
 impl RequestType {
-    fn value(&self) -> &str{
-        match *self{
+    fn value(&self) -> &str {
+        match *self {
             Self::PROJECT => PROJECT_DELETE_CONFIRMATION,
-            Self::TASK => TASK_DELETE_CONFIRMATION
+            Self::TASK => TASK_DELETE_CONFIRMATION,
         }
     }
-    
 }
 
 pub struct RequestClient {
@@ -69,7 +68,6 @@ fn get_client_builder(config: &Data) -> Result<Client> {
     Ok(client)
 }
 
-
 pub fn prepare_client(endpoint: &str, instance: Option<&String>) -> Result<RequestClient> {
     let config = match read_toml_file() {
         Ok(v) => v,
@@ -98,14 +96,12 @@ pub fn prepare_client(endpoint: &str, instance: Option<&String>) -> Result<Reque
     })
 }
 
-
-pub fn get_request(endpoint: &str, instance: Option<&String>) -> Result<RequestClient>{
+pub fn get_request(endpoint: &str, instance: Option<&String>) -> Result<RequestClient> {
     let prep = prepare_client(endpoint, instance)?;
     Ok(prep)
 }
 
-
-pub fn delete_confirmation(item_id: &String, request: RequestType) -> bool{
+pub fn delete_confirmation(item_id: &String, request: RequestType) -> bool {
     let yes = "Y";
     let no = "N";
     print!("{} {} [Y/N]: ", request.value().red().bold(), item_id);
@@ -122,11 +118,10 @@ pub fn delete_confirmation(item_id: &String, request: RequestType) -> bool{
         eprintln!("Options are Y or N");
         std::process::exit(1);
     }
-    if input.eq(yes){
+    if input.eq(yes) {
         return true;
     }
     false
-
 }
 
 #[cfg(test)]
@@ -134,10 +129,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn request_client(){
+    fn request_client() {
         let item_id = "1".to_string();
         let request = get_request("/endpoint/", Some(&item_id));
         assert!(request.is_ok());
-        assert_eq!(request.is_ok_and(|r| r.url == "http://localhost:8000/api/v1/endpoint/1/"), true);
+        assert_eq!(
+            request.is_ok_and(|r| r.url == "http://localhost:8000/api/v1/endpoint/1/"),
+            true
+        );
     }
 }

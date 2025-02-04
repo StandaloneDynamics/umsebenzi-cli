@@ -1,7 +1,7 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct TaskRequest{
+pub struct TaskRequest {
     pub project_id: i32,
     pub title: String,
     pub description: String,
@@ -11,5 +11,5 @@ pub struct TaskRequest{
     pub due_date: Option<String>,
     pub assigned_to_id: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub parent_id: Option<i32>
+    pub parent_id: Option<i32>,
 }

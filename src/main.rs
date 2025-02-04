@@ -1,20 +1,17 @@
 mod config;
-mod project;
-mod service;
-mod description;
-mod task;
-mod response;
-mod request;
 mod defaults;
+mod description;
 mod enums;
-
-
+mod project;
+mod request;
+mod response;
+mod service;
+mod task;
 
 use clap::{Parser, Subcommand};
 use config::{run as c, ConfigArgs};
 use project::{run as p, ProjectArgs};
 use task::{run as t, TaskArgs};
-
 
 #[derive(Subcommand)]
 enum Command {
@@ -34,6 +31,6 @@ fn main() {
     match args.command {
         Command::Config(v) => c(v),
         Command::Project(v) => p(v),
-        Command::Task(v) => t(v)
+        Command::Task(v) => t(v),
     }
 }
