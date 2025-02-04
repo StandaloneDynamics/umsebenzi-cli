@@ -337,7 +337,10 @@ fn status_update(task_id: String, status: String) {
     let mut data = HashMap::new();
     data.insert("status", new_status.to_value());
 
-    let resp = match request.client.patch(request.url).json(&data).send() {
+    // Add /status/ to url
+    let url = request.url + "status/";
+
+    let resp = match request.client.patch(url).json(&data).send() {
         Ok(r) => r,
         Err(err) => {
             eprint!("{}: {err}", CLIENT_RESPONSE_ERROR.red());

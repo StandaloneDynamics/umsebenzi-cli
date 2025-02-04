@@ -52,13 +52,11 @@ fn build_url(conf: &Data, endpoint: &str, instance: Option<&String>) -> Result<S
     let mut api_url = String::new();
     api_url.push_str(&conf.host);
     api_url.push_str(endpoint);
-    match instance {
-        Some(id) => {
-            api_url.push_str(&id);
-            api_url.push_str("/");
-        }
-        _ => {}
+    if let Some(id) = instance{
+        api_url.push_str(&id);
+        api_url.push_str("/");
     }
+    
     Ok(api_url)
 }
 
