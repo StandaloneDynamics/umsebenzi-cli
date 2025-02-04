@@ -4,6 +4,8 @@ This command line tool is a companion to the [django-umsebenzi package]()
 This tool allows you to interact with the API to manage your tasks
 
 
+**I built this tool was built to get more familiar with rust.**
+
 ## Commands
 
 ### Projects
