@@ -26,6 +26,9 @@ This tool allows you to interact with the API to manage your tasks
 
 ## Config
 
+When adding new configs, this creates a folder called umsebenzi in your `$XDG_CONFIG_HOME` directory
+
+
 * Show config `umsebenzi config`
 * Add new config `umsebenzi config add`
 * Edit auth `umsebenzi config edit`
