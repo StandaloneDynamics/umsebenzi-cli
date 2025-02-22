@@ -10,7 +10,7 @@ use colored::Colorize;
 use std::collections::HashMap;
 use std::io::{self, Write};
 
-const PROJECT_ENDPOINT: &str = "/projects/";
+const PROJECT_ENDPOINT: &str = "/projects";
 const PROJECT_TITLE_ERROR: &str = "Project title expected";
 const PROJECT_CODE_ERROR: &str = "Project code expected";
 const PROJECT_DESCRIPTION_ERROR: &str = "Project description expected";
@@ -60,7 +60,7 @@ fn list() {
         let proj: Vec<ProjectResponse> = match resp.json() {
             Ok(r) => r,
             Err(err) => {
-                eprint!("{}: {err}", "Unable to parse response json".red());
+                eprint!("{}: {err:?}", "Unable to parse response json".red());
                 std::process::exit(1);
             }
         };
