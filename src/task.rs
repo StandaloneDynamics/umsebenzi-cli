@@ -13,7 +13,7 @@ use colored::Colorize;
 use std::collections::HashMap;
 use std::io::{self, Write};
 
-const TASK_ENDPOINT: &str = "/tasks/";
+const TASK_ENDPOINT: &str = "/tasks";
 const TASK_TITLE_ERROR: &str = "Task title expected";
 const TASK_DESCRIPTION_ERROR: &str = "Task description expected";
 const TASK_ISSUE_ERROR: &str = "Task issue expected";
@@ -21,6 +21,7 @@ const TASK_PROJECT_ERROR: &str = "Task project expected";
 const TASK_PARENT_ERROR: &str = "Task parent expected";
 const TASK_DATE_ERROR: &str = "Task date expected";
 const TASK_STATUS_ERROR: &str = "Task status expected";
+const TASK_ASSIGN_ERROR: &str = "Task needs to be assigned to a user";
 
 #[derive(Subcommand, Debug)]
 enum TaskCLI {
@@ -283,13 +284,25 @@ fn add() {
         }
         due_date = Some(due_buf.trim().to_string());
     }
+
+    print!("{}: ", "Assigned To".green().bold());
+    let _ = io::stdout().flush();
+    let mut assign_buf = String::new();
+    io::stdin()
+        .read_line(&mut assign_buf)
+        .expect(&TASK_PROJECT_ERROR.red().bold());
+    if assign_buf.trim().is_empty() {
+        eprintln!("{}", TASK_ASSIGN_ERROR.red().bold());
+        std::process::exit(1);
+    }
+
     let task_request = TaskRequest {
         project_id: proj_id,
-        title: title_buf,
+        title: title_buf.trim().to_string(),
         description: description,
         status: status.to_value(),
         issue: issue.to_value(),
-        assigned_to_id: 1,
+        assigned_to_id: assign_buf.trim().to_string(),
         parent_id: parent_id,
         due_date: due_date,
     };
@@ -338,7 +351,7 @@ fn status_update(task_id: String, status: String) {
     data.insert("status", new_status.to_value());
 
     // Add /status/ to url
-    let url = request.url + "status/";
+    let url = request.url + "/status";
 
     let resp = match request.client.patch(url).json(&data).send() {
         Ok(r) => r,
