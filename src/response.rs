@@ -4,7 +4,7 @@ use std::fmt;
 
 #[derive(Serialize, Deserialize, Debug, Table)]
 pub struct User {
-    pub id: i32,
+    pub id: String,
     username: String,
     email: String,
 }

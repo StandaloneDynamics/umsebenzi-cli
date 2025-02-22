@@ -9,7 +9,7 @@ pub struct TaskRequest {
     pub issue: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub due_date: Option<String>,
-    pub assigned_to_id: i32,
+    pub assigned_to_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<i32>,
 }

@@ -53,8 +53,8 @@ fn build_url(conf: &Data, endpoint: &str, instance: Option<&String>) -> Result<S
     api_url.push_str(&conf.host);
     api_url.push_str(endpoint);
     if let Some(id) = instance{
-        api_url.push_str(&id);
         api_url.push_str("/");
+        api_url.push_str(&id);
     }
     
     Ok(api_url)
@@ -129,10 +129,10 @@ mod tests {
     #[test]
     fn request_client() {
         let item_id = "1".to_string();
-        let request = get_request("/endpoint/", Some(&item_id));
+        let request = get_request("/endpoint", Some(&item_id));
         assert!(request.is_ok());
         assert_eq!(
-            request.is_ok_and(|r| r.url == "http://localhost:8000/api/v1/endpoint/1/"),
+            request.is_ok_and(|r| r.url == "http://localhost:8000/api/v1/endpoint/1"),
             true
         );
     }
