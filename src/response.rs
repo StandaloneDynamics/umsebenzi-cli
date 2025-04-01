@@ -1,10 +1,31 @@
 use cli_table::Table;
-use serde::{Deserialize, Serialize};
+use serde::{self, Deserialize, Serialize};
 use std::fmt;
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum UserID{
+    IntId(i32),
+    UUID(String)
+}
+
+impl fmt::Display for UserID {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self{
+            UserID::IntId(v) => {
+                write!(f, "{}", v)
+            },
+            UserID::UUID(s) =>{
+                write!(f, "{}", s)
+            }
+        }
+    }
+    
+}
 
 #[derive(Serialize, Deserialize, Debug, Table)]
 pub struct User {
-    pub id: String,
+    pub id: UserID,
     username: String,
     email: String,
 }

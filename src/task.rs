@@ -4,7 +4,7 @@ use crate::defaults::{show_issue_options, show_status_options};
 use crate::description::text_editor;
 use crate::enums::{Issue, TaskStatus};
 use crate::request::TaskRequest;
-use crate::response::{TaskErrorResponse, TaskResponse};
+use crate::response::{TaskErrorResponse, TaskResponse, UserID};
 use crate::service::{
     delete_confirmation, get_request, RequestType, CLIENT_ERROR, CLIENT_RESPONSE_ERROR,
 };
@@ -23,14 +23,24 @@ const TASK_DATE_ERROR: &str = "Task date expected";
 const TASK_STATUS_ERROR: &str = "Task status expected";
 const TASK_ASSIGN_ERROR: &str = "Task needs to be assigned to a user";
 
+
+#[derive(Parser, Debug)]
+pub struct TaskFilterArgs{
+    #[arg(short, long)]
+    project: Option<String>,
+    #[arg(short, long)]
+    status: Option<String>
+}
+
+
 #[derive(Subcommand, Debug)]
 enum TaskCLI {
-    List,
+    List(TaskFilterArgs),
     Add,
-    Detail { task_id: String },
-    Edit { task_id: String },
-    Delete { task_id: String },
-    Status { task_id: String, status: String },
+    Detail { task_code: String },
+    Edit { task_code: String },
+    Delete { task_code: String },
+    Status { task_code: String, status: String },
 }
 
 #[derive(Parser, Debug)]
@@ -42,15 +52,33 @@ pub struct TaskArgs {
 pub fn run(args: TaskArgs) {
     match args.command {
         TaskCLI::Add => add(),
-        TaskCLI::List => list(),
-        TaskCLI::Edit { task_id } => edit(task_id),
-        TaskCLI::Detail { task_id } => detail(task_id),
-        TaskCLI::Delete { task_id } => delete(task_id),
-        TaskCLI::Status { task_id, status } => status_update(task_id, status),
+        TaskCLI::List(f) => run_filter(f),
+        TaskCLI::Edit { task_code } => edit(task_code),
+        TaskCLI::Detail { task_code } => detail(task_code),
+        TaskCLI::Delete { task_code } => delete(task_code),
+        TaskCLI::Status { task_code, status } => status_update(task_code, status),
     }
 }
 
-fn list() {
+fn run_filter(args: TaskFilterArgs){
+    let mut filter_params = String::new();
+    if let Some(p) = args.project{
+        filter_params.push_str(&format!("?project={}", p));
+    }
+
+    if let Some(s) = args.status {
+        if filter_params.is_empty(){
+            filter_params.push_str(&format!("?status={}", s));
+        }else{
+            filter_params.push_str(&format!("&status={}", s));
+        }
+        
+    }
+    list(Some(filter_params));
+
+}
+
+fn list(filter: Option<String>) {
     let request = match get_request(TASK_ENDPOINT, None) {
         Ok(r) => r,
         Err(err) => {
@@ -58,8 +86,14 @@ fn list() {
             std::process::exit(1)
         }
     };
+    let url;
+    if let Some(f) = filter{
+        url = request.url + &f;
+    }else{
+        url = request.url;
+    }
 
-    let resp = match request.client.get(request.url).send() {
+    let resp = match request.client.get(url).send() {
         Ok(r) => r,
         Err(err) => {
             eprintln!("{}: {err}", CLIENT_RESPONSE_ERROR.red().bold());
@@ -81,8 +115,8 @@ fn list() {
     }
 }
 
-fn detail(task_id: String) {
-    let request = match get_request(TASK_ENDPOINT, Some(&task_id)) {
+fn detail(task_code: String) {
+    let request = match get_request(TASK_ENDPOINT, Some(&task_code)) {
         Ok(c) => c,
         Err(err) => {
             eprint!("{}: {err}", CLIENT_ERROR.red());
@@ -129,10 +163,10 @@ fn detail(task_id: String) {
     }
 }
 
-fn delete(task_id: String) {
-    let is_delete = delete_confirmation(&task_id, RequestType::TASK);
+fn delete(task_code: String) {
+    let is_delete = delete_confirmation(&task_code, RequestType::TASK);
     if is_delete {
-        let request = match get_request(TASK_ENDPOINT, Some(&task_id)) {
+        let request = match get_request(TASK_ENDPOINT, Some(&task_code)) {
             Ok(c) => c,
             Err(err) => {
                 eprint!("{}: {err}", CLIENT_ERROR.red());
@@ -285,7 +319,7 @@ fn add() {
         due_date = Some(due_buf.trim().to_string());
     }
 
-    print!("{}: ", "Assigned To".green().bold());
+    print!("{}: ", "Assigned To [User ID]".green().bold());
     let _ = io::stdout().flush();
     let mut assign_buf = String::new();
     io::stdin()
@@ -332,7 +366,7 @@ fn add() {
     };
 }
 
-fn status_update(task_id: String, status: String) {
+fn status_update(task_code: String, status: String) {
     let new_status = match TaskStatus::from_str(&status) {
         Ok(s) => s,
         Err(err) => {
@@ -340,7 +374,7 @@ fn status_update(task_id: String, status: String) {
             std::process::exit(1);
         }
     };
-    let request = match get_request(TASK_ENDPOINT, Some(&task_id)) {
+    let request = match get_request(TASK_ENDPOINT, Some(&task_code)) {
         Ok(c) => c,
         Err(err) => {
             eprint!("{}: {err}", CLIENT_ERROR.red());
@@ -371,9 +405,9 @@ fn status_update(task_id: String, status: String) {
     };
 }
 
-fn edit(task_id: String) {
+fn edit(task_code: String) {
     let task: TaskResponse;
-    let request = match get_request(TASK_ENDPOINT, Some(&task_id)) {
+    let request = match get_request(TASK_ENDPOINT, Some(&task_code)) {
         Ok(c) => c,
         Err(err) => {
             eprint!("{}: {err}", CLIENT_ERROR.red());
@@ -474,18 +508,27 @@ fn edit(task_id: String) {
         }
 
         let status = TaskStatus::from_api_string(&task.status).expect("Invalid task status");
+        let assign_id;
+        match task.assigned_to.id{
+            UserID::IntId(i) =>{
+                assign_id = i.to_string();
+            },
+            UserID::UUID(s) =>{
+                assign_id = s;
+            }
+        }
         let task_upadate = TaskRequest {
             project_id: task.project.id,
             title: title_buf,
             description: description_buf,
             issue: issue.to_value(),
             due_date: task.due_date,
-            assigned_to_id: task.assigned_to.id,
+            assigned_to_id: assign_id,
             parent_id: parent_id,
             status: status.to_value(),
         };
 
-        let request = match get_request(TASK_ENDPOINT, Some(&task_id)) {
+        let request = match get_request(TASK_ENDPOINT, Some(&task_code)) {
             Ok(c) => c,
             Err(err) => {
                 eprint!("{}: {err}", CLIENT_ERROR.red());
