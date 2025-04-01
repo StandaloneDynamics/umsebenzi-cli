@@ -20,6 +20,7 @@ This tool allows you to interact with the API to manage your tasks
 ### Tasks
 
 * Show tasks `umsebenzi task list`
+* Filter tasks `umsebenzi task list --project=<project code> --status=<staus number> see config section for status number
 * Add task `umsebenzi task add`
 * Detail task `umsebenzi task detail <task code>`
 * Edit task `umsebenzi task edit <task code>`
