@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 use crate::defaults::{show_issue_options, show_status_options};
 use crate::description::text_editor;
-use crate::enums::{Issue, TaskStatus};
+use crate::enums::{Issue, Status};
 use crate::request::TaskRequest;
 use crate::response::{TaskErrorResponse, TaskResponse, UserID};
 use crate::service::{
@@ -286,7 +286,7 @@ fn add() {
     if status_buf.trim().is_empty() {
         status_buf = "1".to_string();
     }
-    let status = match TaskStatus::from_str(&status_buf.trim()) {
+    let status = match Status::from_str(&status_buf.trim()) {
         Ok(s) => s,
         Err(err) => {
             eprintln!("{}: {err}", TASK_STATUS_ERROR.red().bold());
@@ -367,7 +367,7 @@ fn add() {
 }
 
 fn status_update(task_code: String, status: String) {
-    let new_status = match TaskStatus::from_str(&status) {
+    let new_status = match Status::from_str(&status) {
         Ok(s) => s,
         Err(err) => {
             eprintln!("{}: {err}", TASK_STATUS_ERROR.red().bold());
@@ -507,7 +507,8 @@ fn edit(task_code: String) {
             parent_id = task.parent
         }
 
-        let status = TaskStatus::from_api_string(&task.status).expect("Invalid task status");
+        // let status = TaskStatus::from_api_string(&task.status).expect("Invalid task status");
+        // let status = TaskStatus::from_api_string(&task.status).expect("Invalid task status");
         let assign_id;
         match task.assigned_to.id{
             UserID::IntId(i) =>{
@@ -525,7 +526,7 @@ fn edit(task_code: String) {
             due_date: task.due_date,
             assigned_to_id: assign_id,
             parent_id: parent_id,
-            status: status.to_value(),
+            status: task.status.to_value(),
         };
 
         let request = match get_request(TASK_ENDPOINT, Some(&task_code)) {

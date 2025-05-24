@@ -2,6 +2,9 @@ use cli_table::Table;
 use serde::{self, Deserialize, Serialize};
 use std::fmt;
 
+use crate::enums::Status;
+
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum UserID{
@@ -116,15 +119,17 @@ pub struct TaskResponse {
     pub description: String,
     #[table(skip)]
     pub created_by: User,
-    pub status: String,
+    pub status: Status,
     #[table(display_fn = "display_due_date")]
     pub due_date: Option<String>,
     #[table(skip)]
     modified_at: String,
     #[table(display_fn = "display_subtasks")]
     pub subtasks: Option<Vec<SubTaskResponse>>,
+    #[table(skip)]
     pub assigned_to: User,
     pub created_at: String,
+    #[table(skip)]
     #[table(display_fn = "display_parent")]
     pub parent: Option<i32>,
 }

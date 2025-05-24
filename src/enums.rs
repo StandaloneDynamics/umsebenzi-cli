@@ -1,4 +1,8 @@
 use anyhow::{anyhow, Result};
+use std::fmt;
+use serde::{self, Deserialize, Serialize};
+
+use colored::Colorize;
 
 #[derive(PartialEq, Clone)]
 pub enum Issue {
@@ -31,53 +35,59 @@ impl Issue {
     }
 }
 
-pub enum TaskStatus {
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Status{
     DRAFT,
     READY,
-    TODO,
-    InPROGRESS,
+    TO_DO,
+    IN_PROGRESS,
     REVIEW,
     COMPLETE,
-    ARCHIVE,
+    ARCHIVE
 }
 
-impl TaskStatus {
+impl fmt::Display for Status {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Status::DRAFT => write!(f, "{}", "DRAFT".blue()),
+            Status::READY => write!(f, "{}", "READY".blue()),
+            Status::TO_DO => write!(f, "{}", "TO_DO".yellow()),
+            Status::IN_PROGRESS => write!(f, "{}", "IN_PROGRESS".green()),
+            Status::REVIEW => write!(f, "{}", "REVIEW".magenta()),
+            Status::COMPLETE => write!(f,"{}", "COMPLETE".magenta()),
+            Status::ARCHIVE => write!(f, "{}", "ARCHIVE".magenta()),
+        }
+    }
+}
+
+impl Status {
     pub fn to_value(&self) -> i32 {
         match *self {
             Self::DRAFT => 1,
             Self::READY => 2,
-            Self::TODO => 3,
-            Self::InPROGRESS => 4,
+            Self::TO_DO => 3,
+            Self::IN_PROGRESS => 4,
             Self::REVIEW => 5,
             Self::COMPLETE => 6,
             Self::ARCHIVE => 7,
         }
     }
-    pub fn from_str(s: &str) -> Result<TaskStatus> {
+    // number repesenting status that user will enter
+    pub fn from_str(s: &str) -> Result<Status> {
         match s {
-            "1" => Ok(TaskStatus::DRAFT),
-            "2" => Ok(TaskStatus::READY),
-            "3" => Ok(TaskStatus::TODO),
-            "4" => Ok(TaskStatus::InPROGRESS),
-            "5" => Ok(TaskStatus::REVIEW),
-            "6" => Ok(TaskStatus::COMPLETE),
-            "7" => Ok(TaskStatus::ARCHIVE),
-            _ => Err(anyhow!("Invalid task status")),
-        }
-    }
-    pub fn from_api_string(s: &str) -> Result<TaskStatus> {
-        match s {
-            "DRAFT" => Ok(TaskStatus::DRAFT),
-            "READY" => Ok(TaskStatus::READY),
-            "TODO" => Ok(TaskStatus::TODO),
-            "IN_PROGRESS" => Ok(TaskStatus::InPROGRESS),
-            "REVIEW" => Ok(TaskStatus::REVIEW),
-            "COMPLETE" => Ok(TaskStatus::COMPLETE),
-            "ARCHIVE" => Ok(TaskStatus::ARCHIVE),
+            "1" => Ok(Status::DRAFT),
+            "2" => Ok(Status::READY),
+            "3" => Ok(Status::TO_DO),
+            "4" => Ok(Status::IN_PROGRESS),
+            "5" => Ok(Status::REVIEW),
+            "6" => Ok(Status::COMPLETE),
+            "7" => Ok(Status::ARCHIVE),
             _ => Err(anyhow!("Invalid task status")),
         }
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
